@@ -43,7 +43,7 @@ dependencies:
   # Networking
   dio: ^5.9.0
   retrofit: ^4.9.0
-  retrofit_generator: ^10.1.4
+  retrofit_generator: ^10.0.1
   pretty_dio_logger: ^1.4.0
   # Localization
   intl: ^0.20.2
@@ -60,13 +60,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  # A build system for Dart code generation and modular compilation
+  build_runner: ^2.10.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
