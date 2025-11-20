@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:vcareapp/core/helpers/spacing.dart';
-import 'package:vcareapp/features/login/data/models/login_request_body.dart';
 import 'package:vcareapp/features/login/logic/login_cubit.dart';
 import 'package:vcareapp/features/login/ui/widgets/email_and_password.dart';
 import 'package:vcareapp/features/login/ui/widgets/login_bloc_listener.dart';
@@ -54,7 +53,7 @@ class LoginScreen extends StatelessWidget {
                     verticalSpace(16),
                     const TermesAndConditionsText(),
                     verticalSpace(60),
-                    const AlreadyHaveAnAccountText(),
+                    const DontHaveAnAccountText(),
                     const LoginBlocListener(),
                   ],
                 ),
@@ -67,13 +66,8 @@ class LoginScreen extends StatelessWidget {
   }
 
   void validateThenDoLogin(BuildContext context) {
-    if (context.read<LoginCubit>().formKey.currentState!.validate()) {
-      context.read<LoginCubit>().emitLoginStates(
-        LoginRequestBody(
-          email: context.read<LoginCubit>().emailController.text,
-          password: context.read<LoginCubit>().passwordController.text,
-        ),
-      );
+    if(context.read<LoginCubit>().formKey.currentState!.validate()){
+      context.read<LoginCubit>().emitLoginStates();
     }
   }
 }

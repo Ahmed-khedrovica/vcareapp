@@ -4,6 +4,8 @@ import 'package:vcareapp/core/networking/api_service.dart';
 import 'package:vcareapp/core/networking/dio_factory.dart';
 import 'package:vcareapp/features/login/data/repos/login_repo.dart';
 import 'package:vcareapp/features/login/logic/login_cubit.dart';
+import 'package:vcareapp/features/sign_up/data/repos/sign_up_repo.dart';
+import 'package:vcareapp/features/sign_up/logic/signup_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -14,5 +16,9 @@ Future<void> setupGetIt() async {
 
   // login
   getIt.registerLazySingleton<LoginRepo>(() => LoginRepo(getIt()));
-  getIt.registerLazySingleton<LoginCubit>(() => LoginCubit(getIt()));
+  getIt.registerFactory<LoginCubit>(() => LoginCubit(getIt()));
+
+  //signup
+  getIt.registerLazySingleton<SignupRepo>(() => SignupRepo(getIt()));
+  getIt.registerFactory<SignupCubit>(() => SignupCubit(getIt()));
 }

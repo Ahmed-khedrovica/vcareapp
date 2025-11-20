@@ -6,6 +6,8 @@ import 'package:vcareapp/features/home/ui/home_screen.dart';
 import 'package:vcareapp/features/login/logic/login_cubit.dart';
 import 'package:vcareapp/features/login/ui/login_screen.dart';
 import 'package:vcareapp/features/onBoarding/onboarding_screen.dart';
+import 'package:vcareapp/features/sign_up/logic/signup_cubit.dart';
+import 'package:vcareapp/features/sign_up/ui/sign_up_screen.dart';
 
 class AppRouter {
   Route generateRoute(RouteSettings settings) {
@@ -25,6 +27,13 @@ class AppRouter {
                 BlocProvider(
                   create: (context) => getIt<LoginCubit>(),
                   child: const LoginScreen(),
+                ));
+      case Routes.signupScreen:
+        return MaterialPageRoute(
+            builder: (_) =>
+                BlocProvider(
+                  create: (context) => getIt<SignupCubit>(),
+                  child: const SignupScreen(),
                 ));
       default:
         return MaterialPageRoute(
