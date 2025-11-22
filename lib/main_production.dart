@@ -12,7 +12,7 @@ void main() async {
   mainCommon(
     flavor: Flavor.production,
     baseUrl: ApiConstants.apiBaseUrl,
-    name: 'Production',
+    name: 'production',
   );
   setupGetIt();
   // To fix texts being hidden bug in flutter_screenutil in release mode.
