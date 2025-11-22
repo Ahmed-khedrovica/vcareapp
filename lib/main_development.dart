@@ -10,14 +10,12 @@ import 'core/di/dependency_injection.dart';
 
 void main() async {
   mainCommon(
-    flavor: Flavor.production,
+    flavor: Flavor.development,
     baseUrl: ApiConstants.apiBaseUrl,
-    name: 'Development',
+    name: 'development',
   );
   setupGetIt();
   // To fix texts being hidden bug in flutter_screenutil in release mode.
   await ScreenUtil.ensureScreenSize();
-  runApp(DocApp(
-    appRouter: AppRouter(),
-  ));
+  runApp(DocApp(appRouter: AppRouter()));
 }

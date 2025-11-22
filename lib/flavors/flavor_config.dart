@@ -11,16 +11,30 @@ class FlavorConfig {
     required this.flavor,
     required this.baseUrl,
     required this.name,
-  });
+  }) {
+    _instance = this;
+  }
 
-  factory FlavorConfig({
+  /// Call once at startup
+  static void setup({
     required Flavor flavor,
     required String baseUrl,
     required String name,
   }) {
-    _instance ??= FlavorConfig._(flavor: flavor, baseUrl: baseUrl, name: name);
-    return _instance!;
+    if (_instance != null) {
+      throw Exception("FlavorConfig is already initialized");
+    }
+    FlavorConfig._(flavor: flavor, baseUrl: baseUrl, name: name);
   }
+
+  // factory FlavorConfig({
+  //   required Flavor flavor,
+  //   required String baseUrl,
+  //   required String name,
+  // }) {
+  //   _instance ??= FlavorConfig._(flavor: flavor, baseUrl: baseUrl, name: name);
+  //   return _instance!;
+  // }
 
   static FlavorConfig get instance {
     if (_instance == null) {
@@ -30,5 +44,6 @@ class FlavorConfig {
   }
 
   static bool isDevelopment() => instance.flavor == Flavor.development;
+
   static bool isProduction() => instance.flavor == Flavor.production;
 }
