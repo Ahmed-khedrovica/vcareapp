@@ -8,6 +8,9 @@ on:
 jobs:
   distribute_to_firebase:
     runs-on: ubuntu-latest
+    env:
+      # Reduce noise from gradle daemon in CI
+      ORG_GRADLE_PROJECT_android_enableAapt2: "true"
     steps:
       - name: Checkout my repo code
         uses: actions/checkout@v4
@@ -30,43 +33,103 @@ jobs:
           bundler-cache: false
           working-directory: android
 
+      - name: Restore gems cache
+        uses: actions/cache@v4
+        with:
+          path: android/vendor/bundle
+          key: ruby-gems-${{ runner.os }}-android-${{ hashFiles('android/Gemfile.lock') }}
+          restore-keys: |
+            ruby-gems-${{ runner.os }}-android-
+
       - name: Add linux platform to lockfile and install gems
         working-directory: android
         env:
           BUNDLE_PATH: vendor/bundle
         run: |
-          set -e
+          set -euo pipefail
+          echo ">>> Ensure Gemfile.lock supports linux platform"
           bundle lock --add-platform x86_64-linux || true
           bundle lock --add-platform ruby || true
-          bundle install --path vendor/bundle --jobs 4 --retry 3
+          echo ">>> bundle install"
+          bundle install --path vendor/bundle --jobs 4 --retry 3 || (echo "bundle install failed; printing bundle env" && bundle env && exit 1)
 
-      - name: Verify fastlane is available (binstub fallback / gem install fallback)
+      - name: Save gems cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: android/vendor/bundle
+          key: ruby-gems-${{ runner.os }}-android-${{ hashFiles('android/Gemfile.lock') }}
+
+      - name: Ensure gradlew is executable & list fastlane files
+        working-directory: android
+        run: |
+          set -euo pipefail
+          if [ -f ./gradlew ]; then chmod +x ./gradlew; fi
+          echo "---- fastlane directory ----"
+          ls -la fastlane || true
+          echo "---- Fastfile preview (first 200 lines) ----"
+          sed -n '1,200p' fastlane/Fastfile || true
+
+      - name: Print environment hints (non-sensitive)
+        working-directory: android
+        env:
+          FIREBASE_CLI_TOKEN: ${{ secrets.FIREBASE_CLI_TOKEN }}
+        run: |
+          set -euo pipefail
+          java -version || true
+          flutter --version || true
+          flutter doctor -v || true
+          [ -f fastlane/Fastfile ] && echo "Fastfile exists" || echo "Fastfile MISSING"
+          [ -f google-services.json ] && echo "google-services.json exists" || echo "google-services.json MISSING"
+          if [ -n "${FIREBASE_CLI_TOKEN:-}" ]; then echo "FIREBASE_CLI_TOKEN: set"; else echo "FIREBASE_CLI_TOKEN: NOT SET"; fi
+
+      - name: Verify fastlane is available (and attempt fixes if not)
         working-directory: android
         env:
           BUNDLE_PATH: vendor/bundle
         run: |
-          set -e
-          echo "== Bundler env =="
-          bundle env || true
+          set -euo pipefail
           echo "== Try bundle exec fastlane --version =="
           if bundle exec fastlane --version; then
             echo "fastlane available via bundle exec"
-          else
-            echo "bundle exec fastlane failed, trying binstub"
-            if bundle binstubs fastlane --force && [ -x ./bin/fastlane ]; then
-              ./bin/fastlane --version
-            else
-              echo "binstub failed, trying to install fastlane gem globally as fallback"
-              gem install fastlane --no-document || true
-              fastlane --version || true
-            fi
+            exit 0
           fi
 
-      - name: Build and Distribute App
+          echo "bundle exec fastlane failed — trying binstub"
+          if bundle binstubs fastlane --force && [ -x ./bin/fastlane ]; then
+            ./bin/fastlane --version && exit 0
+          fi
+
+          echo "binstub failed — trying to install small missing gems (kconv) globally as fallback"
+          gem install kconv --no-document || true
+
+          echo "Retry bundle exec fastlane --version after installing kconv"
+          if bundle exec fastlane --version; then
+            echo "fastlane available after kconv install"
+            exit 0
+          fi
+
+          echo "fastlane still failing. Trying targeted bundle update for fastlane/core deps"
+          bundle update fastlane fastlane_core CFPropertyList || true
+          echo "Re-running bundle install to ensure Gemfile.lock consistency"
+          bundle install --path vendor/bundle --jobs 4 --retry 3 || (echo "bundle install failed after update" && bundle env && exit 1)
+
+          echo "Final check: bundle exec fastlane --version"
+          bundle exec fastlane --version || (echo "Final fastlane check failed" && bundle env && exit 1)
+
+      - name: Run fastlane (verbose) and capture full logs
         working-directory: android
         env:
           FIREBASE_CLI_TOKEN: ${{ secrets.FIREBASE_CLI_TOKEN }}
           BUNDLE_PATH: vendor/bundle
         run: |
-          set -e
-          bundle exec fastlane android firebase_distribution
+          set -euo pipefail
+          echo "Running fastlane android firebase_distribution (verbose)"
+          bundle exec fastlane android firebase_distribution --verbose || {
+            echo "fastlane failed — collecting diagnostics"
+            echo "---- gradle assemble (debug) stacktrace ----"
+            if [ -f ./gradlew ]; then ./gradlew assembleRelease --stacktrace || true; fi
+            echo "---- bundle env ----"
+            bundle env || true
+            exit 1
+          }
