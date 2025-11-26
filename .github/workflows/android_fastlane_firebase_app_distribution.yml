@@ -27,10 +27,10 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4.7"
-          bundler-cache: true
+          bundler-cache: false
           working-directory: android
 
-      - name: Ensure Bundler lockfile includes Linux platform and install gems
+      - name: Add linux platform to lockfile and install gems
         working-directory: android
         run: |
           bundle lock --add-platform x86_64-linux
