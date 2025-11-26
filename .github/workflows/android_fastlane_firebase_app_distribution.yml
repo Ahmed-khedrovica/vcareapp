@@ -30,26 +30,55 @@ jobs:
           bundler-cache: false
           working-directory: android
 
-      - name: Add linux platform and install gems
+      - name: Prepare bundler & install gems
         working-directory: android
         env:
           BUNDLE_PATH: vendor/bundle
         run: |
-          set -e
+          set -euo pipefail
           bundle lock --add-platform x86_64-linux || true
           bundle lock --add-platform ruby || true
-          bundle install --path vendor/bundle --jobs 4 --retry 3
+          bundle install --path vendor/bundle --jobs 4 --retry 3 || true
 
-      - name: Make gradlew executable (if present)
+      - name: Install kconv system-wide and set preload
+        run: |
+          set -euo pipefail
+          gem install kconv --no-document || true
+          echo "RUBYOPT will preload kconv during fastlane execution."
+
+      - name: Make gradlew executable
         working-directory: android
         run: |
           if [ -f ./gradlew ]; then chmod +x ./gradlew; fi
 
-      - name: Build and distribute via fastlane
+      - name: Run fastlane (bundle exec preferred; fallback to system fastlane)
         working-directory: android
         env:
-          BUNDLE_PATH: vendor/bundle
           FIREBASE_CLI_TOKEN: ${{ secrets.FIREBASE_CLI_TOKEN }}
+          FASTLANE_DISABLE_UPDATE_CHECK: "1"
+          RUBYOPT: "-r kconv"
+          BUNDLE_PATH: vendor/bundle
         run: |
-          set -e
-          bundle exec fastlane android firebase_distribution
+          set -euo pipefail
+          echo "Attempt #1: bundle exec fastlane (preferred)"
+          if bundle exec fastlane android firebase_distribution --verbose; then
+            echo "fastlane succeeded via bundle exec"
+            exit 0
+          fi
+
+          echo "bundle exec failed — attempt #2: try binstub"
+          if bundle binstubs fastlane --force && [ -x ./bin/fastlane ]; then
+            ./bin/fastlane android firebase_distribution --verbose && exit 0 || true
+          fi
+
+          echo "Attempt #3: install fastlane system gem (fallback) and run directly"
+          gem install fastlane -v "2.229.0" --no-document || true
+          fastlane android firebase_distribution --verbose || {
+            echo "All fastlane attempts failed. Collecting diagnostics..."
+            echo "---- bundle env ----"
+            bundle env || true
+            echo "---- gem list (fastlane) ----"
+            gem list | grep fastlane || true
+            if [ -f ./gradlew ]; then echo "---- gradle assembleRelease (stacktrace) ----" && ./gradlew assembleRelease --stacktrace || true; fi
+            exit 1
+          }
