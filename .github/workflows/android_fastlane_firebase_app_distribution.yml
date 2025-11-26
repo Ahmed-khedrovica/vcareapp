@@ -32,13 +32,41 @@ jobs:
 
       - name: Add linux platform to lockfile and install gems
         working-directory: android
+        env:
+          BUNDLE_PATH: vendor/bundle
         run: |
-          bundle lock --add-platform x86_64-linux
-          bundle install --jobs 4 --retry 3
+          set -e
+          bundle lock --add-platform x86_64-linux || true
+          bundle lock --add-platform ruby || true
+          bundle install --path vendor/bundle --jobs 4 --retry 3
+
+      - name: Verify fastlane is available (binstub fallback / gem install fallback)
+        working-directory: android
+        env:
+          BUNDLE_PATH: vendor/bundle
+        run: |
+          set -e
+          echo "== Bundler env =="
+          bundle env || true
+          echo "== Try bundle exec fastlane --version =="
+          if bundle exec fastlane --version; then
+            echo "fastlane available via bundle exec"
+          else
+            echo "bundle exec fastlane failed, trying binstub"
+            if bundle binstubs fastlane --force && [ -x ./bin/fastlane ]; then
+              ./bin/fastlane --version
+            else
+              echo "binstub failed, trying to install fastlane gem globally as fallback"
+              gem install fastlane --no-document || true
+              fastlane --version || true
+            fi
+          fi
 
       - name: Build and Distribute App
+        working-directory: android
         env:
           FIREBASE_CLI_TOKEN: ${{ secrets.FIREBASE_CLI_TOKEN }}
-        working-directory: android
+          BUNDLE_PATH: vendor/bundle
         run: |
+          set -e
           bundle exec fastlane android firebase_distribution
