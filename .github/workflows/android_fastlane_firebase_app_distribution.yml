@@ -1,4 +1,4 @@
-name: Android Fastlane with Firebase App Distribution Workflow
+name: Android Fastlane with Firebase App Distribution
 
 on:
   push:
@@ -8,77 +8,57 @@ on:
 jobs:
   distribute_to_firebase:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle'
 
-      - name: Install Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
-      - name: Setup Ruby for fastlane
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4.7"
-          bundler-cache: false
+          ruby-version: '3.3'
+          bundler-cache: true
           working-directory: android
-
-      - name: Prepare bundler & install gems
-        working-directory: android
-        env:
-          BUNDLE_PATH: vendor/bundle
-        run: |
-          set -euo pipefail
-          bundle lock --add-platform x86_64-linux || true
-          bundle lock --add-platform ruby || true
-          bundle install --path vendor/bundle --jobs 4 --retry 3 || true
-
-      - name: Install kconv system-wide and set preload
-        run: |
-          set -euo pipefail
-          gem install kconv --no-document || true
-          echo "RUBYOPT will preload kconv during fastlane execution."
 
       - name: Make gradlew executable
         working-directory: android
-        run: |
-          if [ -f ./gradlew ]; then chmod +x ./gradlew; fi
+        run: chmod +x ./gradlew
 
-      - name: Run fastlane (bundle exec preferred; fallback to system fastlane)
+      - name: Verify Fastlane installation
+        working-directory: android
+        run: |
+          bundle exec fastlane --version
+          echo "Fastlane is ready"
+
+      - name: Run Fastlane Firebase Distribution
         working-directory: android
         env:
           FIREBASE_CLI_TOKEN: ${{ secrets.FIREBASE_CLI_TOKEN }}
           FASTLANE_DISABLE_UPDATE_CHECK: "1"
-          RUBYOPT: "-r kconv"
-          BUNDLE_PATH: vendor/bundle
-        run: |
-          set -euo pipefail
-          echo "Attempt #1: bundle exec fastlane (preferred)"
-          if bundle exec fastlane android firebase_distribution --verbose; then
-            echo "fastlane succeeded via bundle exec"
-            exit 0
-          fi
+        run: bundle exec fastlane android firebase_distribution
 
-          echo "bundle exec failed — attempt #2: try binstub"
-          if bundle binstubs fastlane --force && [ -x ./bin/fastlane ]; then
-            ./bin/fastlane android firebase_distribution --verbose && exit 0 || true
-          fi
-
-          echo "Attempt #3: install fastlane system gem (fallback) and run directly"
-          gem install fastlane -v "2.229.0" --no-document || true
-          fastlane android firebase_distribution --verbose || {
-            echo "All fastlane attempts failed. Collecting diagnostics..."
-            echo "---- bundle env ----"
-            bundle env || true
-            echo "---- gem list (fastlane) ----"
-            gem list | grep fastlane || true
-            if [ -f ./gradlew ]; then echo "---- gradle assembleRelease (stacktrace) ----" && ./gradlew assembleRelease --stacktrace || true; fi
-            exit 1
-          }
+      - name: Upload build artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-outputs
+          path: |
+            android/app/build/outputs/
+            android/fastlane/report.xml
+          retention-days: 7
