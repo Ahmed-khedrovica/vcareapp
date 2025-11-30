@@ -2,9 +2,13 @@
 class Assets {
   Assets._();
 
+  static const String imagesHomeBluePattern = 'assets/images/home_blue_pattern.png';
+  static const String imagesOmar = 'assets/images/home_doctor.png';
   static const String imagesOnboardingDoctor = 'assets/images/onboarding_doctor.png';
   static const String imagesSplash = 'assets/images/splash.png';
+  static const String imagesSplashAndroid12 = 'assets/images/splash_android_12+.png';
   static const String svgsDocdocLogo = 'assets/svgs/docdoc_logo.svg';
   static const String svgsDocdocLogoLowOpacity = 'assets/svgs/docdoc_logo_low_opacity.svg';
+  static const String svgsNotifications = 'assets/svgs/notifications.svg';
 
 }
