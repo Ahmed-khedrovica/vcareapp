@@ -16,11 +16,11 @@ class AlreadyHaveAccountText extends StatelessWidget {
         children: [
           TextSpan(
             text: 'Already have an account?',
-            style: TextStyles.font13DarkBlueRegular,
+            style: AppTextStyles.font13DarkBlueRegular,
           ),
           TextSpan(
             text: ' Login',
-            style: TextStyles.font13BlueSemiBold,
+            style: AppTextStyles.font13BlueSemiBold,
             recognizer: TapGestureRecognizer()
               ..onTap = () {
                 context.pushReplacementNamed(Routes.loginScreen);

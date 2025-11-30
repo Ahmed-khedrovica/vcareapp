@@ -15,7 +15,7 @@ class DocApp extends StatelessWidget {
       minTextAdapt: true,
       child: MaterialApp(
         theme: ThemeData(
-          primaryColor: ColorsManager.mainBlue,
+          primaryColor: AppColors.mainBlue,
           scaffoldBackgroundColor: Colors.white,
         ),
           debugShowCheckedModeBanner: false,
